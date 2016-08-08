@@ -4,6 +4,8 @@ from collections import OrderedDict
 from ConfigParser import ConfigParser
 import hashlib
 from subprocess import check_output
+import datetime as dt
+import shutil
 
 import iris
 
@@ -116,9 +118,13 @@ class UMOV(object):
 
 
     def gen_output(self):
-        output_dir = self.cp.get('paths', 'output_dir')
+	timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M')
+        output_dir = os.path.join(self.cp.get('paths', 'output_dir'), timestamp)
+
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+	
+	shutil.copy('umov.conf', output_dir)
 
         for output_fn_name in self.cp.options('outputs'):
             variables = self.cp.get(output_fn_name, 'variables')
