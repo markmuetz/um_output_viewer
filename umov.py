@@ -84,17 +84,32 @@ class UMOV(object):
         if self.cp.getboolean('settings', 'caching'):
             cache_dir = os.path.join(self.cp.get('paths', 'cache_dir'),
                                      self.cache_hash)
+	    if not os.path.exists(cache_dir):
+		os.makedirs(cache_dir)
 
         self.output_dict = OrderedDict()
+	skip = {}
 
         for output_var in self.cp.options('output_vars'):
-            self.output_dict[output_var] = []
+	    skip[output_var] = False
+	    if self.cp.getboolean('settings', 'caching'):
+		cache_filename = os.path.join(cache_dir, '{}.nc'.format(output_var))
+		if os.path.exists(cache_filename):
+		    self.output_dict[output_var] = iris.load_cube(cache_filename)
+		    skip[output_var] = True
+		else:
+		    self.output_dict[output_var] = []
+	    else:
+		self.output_dict[output_var] = []
 
         for opt, filenames in self.filename_dict.items():
-            for filename in filenames[:5]:
+	    for filename in filenames[:5]:
                 for output_var in self.cp.options('output_vars'):
-
+		    if skip[output_var]:
+			continue
                     file = self.cp.get(output_var, 'file')
+		    if file != opt:
+			continue
                     section = self.cp.getint(output_var, 'section')
                     item = self.cp.getint(output_var, 'item')
                     analysis_fn = getattr(analysis, self.cp.get(output_var, 'analysis'))
@@ -114,8 +129,16 @@ class UMOV(object):
                     if not cube:
                         raise Exception('Cannot find cube {}'.format(output_var))
                     
-                    self.output_dict[output_var].extend(analysis_fn(cube))
+                    self.output_dict[output_var].append(analysis_fn(cube))
 
+        for output_var in self.cp.options('output_vars'):
+	    if skip[output_var]:
+		continue
+            self.output_dict[output_var] = iris.cube.CubeList(self.output_dict[output_var]).concatenate_cube()
+
+	    if self.cp.getboolean('settings', 'caching'):
+		cache_filename = os.path.join(cache_dir, '{}.nc'.format(output_var))
+		iris.save(self.output_dict[output_var], cache_filename)
 
     def gen_output(self):
 	timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M')
