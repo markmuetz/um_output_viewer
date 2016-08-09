@@ -16,22 +16,29 @@ log = get_logger()
 
 class UMO(object):
     def __init__(self, filename='umov.conf'):
+	self.curr_cube_index = 0
 	self.curr_time_index = 0
 	self.curr_level_index = 0
+        self.filename_index = 0
         self.all_cubes = []
-        self.print_vars()
+        self.cube_dict = OrderedDict()
+        self.load_cubes(self.filename_index)
+
 
     def process(self):
         self.gen_output_dict()
 
 
-    def print_vars(self):
+    def load_cubes(self, filename_index):
+        self.filename_index = filename_index
+
+        self.all_cubes = []
         self.cube_dict = OrderedDict()
         self.stash_vars = load_stash_vars()
 
         for opt, filenames in config.filename_dict.items():
             log.info(opt)
-            cubes = iris.load(filenames[0])
+            cubes = iris.load(filenames[filename_index])
             self.cube_dict[opt] = cubes
             for cube in cubes:
                 self.all_cubes.append(cube)
@@ -39,12 +46,16 @@ class UMO(object):
                 section, item = cube_stash.section, cube_stash.item
                 stash_name = self.stash_vars[section][item]
                 log.info('{0:>4}{1:>4} {2} {3}'.format(section, item, stash_name, cube.shape))
+	self.curr_cube = self.all_cubes[self.curr_cube_index]
 
-    def set_cube(self, cube_name):
+
+    def set_cube_from_conf_name(self, cube_name):
 	stream = config.get(cube_name, 'stream')
 	section = config.getint(cube_name, 'section')
 	item = config.getint(cube_name, 'item')
+        self.set_cube(stream, section, item)
 
+    def set_cube(self, stream, section, item):
 	cube = None
 	cubes = self.cube_dict[stream]
 
@@ -58,10 +69,11 @@ class UMO(object):
 		cube = test_cube
 
 	if not cube:
-	    raise Exception('Cannot find cube {}'.format(output_var))
+	    raise Exception('Cannot find cube {}'.format((stream, section, item)))
 
 	self.curr_cube = cube
         self.curr_cube_index = self.all_cubes.index(self.curr_cube)
+
 
     def gen_output_dict(self):
         self.output_dict = OrderedDict()
@@ -143,6 +155,9 @@ class UMO(object):
         self.check_indices_in_range()
 
     def check_indices_in_range(self):
+        if self.curr_time_index >= self.curr_cube.shape[0]:
+            self.load_cubes(self.filename_index + 1)
+            self.curr_time_index = 0
         self.curr_time_index %= self.curr_cube.shape[0]
         if self.curr_cube.ndim == 4:
             self.curr_level_index %= self.curr_cube.shape[1]
@@ -156,4 +171,3 @@ class UMO(object):
 
 if __name__ == '__main__':
     umo = UMO()
-    umo.print_vars()

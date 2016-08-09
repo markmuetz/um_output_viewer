@@ -16,7 +16,7 @@ def main():
 
     def plot_graph(child_conn):
         umov = umov_mod.main()
-        umov.umo.set_cube('w')
+        umov.umo.set_cube_from_conf_name('w')
 
         child_conn.send('loaded')
         key = '2'
@@ -69,9 +69,9 @@ def main():
 
         parent_conn.send(key)
         status = parent_conn.recv()
+        # TODO: Out of step with imshow.
         stdscr.addstr(1, 3, 'var: {0:<80}'.format(status))
         stdscr.refresh()
-
 
     parent_conn.send('q')
     proc.join()

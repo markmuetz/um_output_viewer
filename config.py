@@ -25,12 +25,19 @@ class Config(ConfigParser):
                 setattr(self, option, self.get('settings', option))
 
         file_globs = OrderedDict()
+        convert_file_globs = OrderedDict()
         for opt in self.options('streams'):
             file_globs[opt] = os.path.join(self.work_dir, self.get('streams', opt))
 
+        for opt in self.options('convert_streams'):
+            convert_file_globs[opt] = os.path.join(self.work_dir, self.get('convert_streams', opt))
+
         self.filename_dict = OrderedDict()
+        self.convert_filename_dict = OrderedDict()
         for opt, file_glob in file_globs.items():
             self.filename_dict[opt] = sorted(glob(file_glob))
+        for opt, convert_file_glob in convert_file_globs.items():
+            self.convert_filename_dict[opt] = sorted(glob(convert_file_glob))
 
 	timestamp = dt.datetime.now().strftime(self.output_time_fmt)
         self.output_dir = os.path.join(self.output_base_dir, timestamp)

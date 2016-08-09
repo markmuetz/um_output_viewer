@@ -34,7 +34,7 @@ def get_logger(name='umov'):
 	root_logger.setLevel(min(console_level, file_level))
 
 	root_logger.addHandler(fileHandler)
-	#root_logger.addHandler(streamHandler)
+	root_logger.addHandler(streamHandler)
 
 	root_logger.debug('Created root logger: {0}'.format('umov.log'))
 

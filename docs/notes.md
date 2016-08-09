@@ -31,4 +31,8 @@ Cache needs to be invalidated on the following:
 * Change to code (done through git commits)
 * Change to data in work (how to check this?)
 
+Loading files
+=============
 
+Find out that loading nc files is hugely (~100x) faster as loading fields files. Write a simple
+converter to turn e.g. atmos.000.pp3 into atmos.000.3.nc.
