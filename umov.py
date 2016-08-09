@@ -1,24 +1,29 @@
 import os
 from collections import OrderedDict
-import datetime as dt
 import shutil
 
 from config import config
 from local_state import state
+from setup_logging import get_logger
 
 from umo import UMO
 import output
 
+log = get_logger()
+
 def main():
+    log.info('Running main')
     if config.ignore_orography_warnings:
         # DO NOT LEAVE IN!!!
         # Added so as orography warning not shown on iris.load.
+        log.warn('Disabling warnings')
         import warnings
         warnings.filterwarnings("ignore")
 
     umo = UMO()
     umov = UMOV(umo)
     umov.run()
+    return umov
 
 class UMOV(object):
     def __init__(self, umo):
@@ -33,18 +38,17 @@ class UMOV(object):
 
 
     def process(self):
-        print('processing')
+        log.info('processing')
         self.umo.process()
 
 
     def output(self):
-        print('outputting')
+        log.info('outputting')
         self.gen_output()
 
 
     def gen_output(self):
-	timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M')
-        output_dir = os.path.join(config.output_dir, timestamp)
+        output_dir = config.output_dir
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -52,7 +56,7 @@ class UMOV(object):
 	shutil.copy('umov.conf', output_dir)
 
         for output_fn_name in config.options('output_fn_names'):
-            print(output_fn_name)
+            log.debug(output_fn_name)
             variables = config.get(output_fn_name, 'variables')
             output_vars_for_fn = map(str.strip, variables.split(','))
             output_dict_for_fn = OrderedDict()
@@ -68,4 +72,4 @@ class UMOV(object):
 
 
 if __name__ == '__main__':
-    main()
+    umov = main()

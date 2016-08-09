@@ -1,4 +1,5 @@
 import os
+import datetime as dt
 from collections import OrderedDict
 from ConfigParser import ConfigParser
 from glob import glob
@@ -16,8 +17,10 @@ class Config(ConfigParser):
         for option in self.options('settings'):
             if option[:5] == 'bool_':
                 setattr(self, option[5:], self.getboolean('settings', option))
-            elif option[:4] == 'int':
+            elif option[:4] == 'int_':
                 setattr(self, option[4:], self.getint('settings', option))
+            elif option[-4:] == '_dir':
+                setattr(self, option, os.path.expandvars(self.get('settings', option)))
             else:
                 setattr(self, option, self.get('settings', option))
 
@@ -28,6 +31,9 @@ class Config(ConfigParser):
         self.filename_dict = OrderedDict()
         for opt, file_glob in file_globs.items():
             self.filename_dict[opt] = sorted(glob(file_glob))
+
+	timestamp = dt.datetime.now().strftime(self.output_time_fmt)
+        self.output_dir = os.path.join(self.output_base_dir, timestamp)
 
 
 config = Config()

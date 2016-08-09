@@ -5,12 +5,14 @@ import iris
 
 from config import config
 from cache import cache
+from setup_logging import get_logger
 
 from um_stash_parser.parse_stash import load_stash_vars
 
 import analysis
 import output
 
+log = get_logger()
 
 class UMO(object):
     def __init__(self, filename='umov.conf'):
@@ -26,14 +28,14 @@ class UMO(object):
         self.stash_vars = load_stash_vars()
 
         for opt, filenames in config.filename_dict.items():
-            print(opt)
+            log.info(opt)
             cubes = iris.load(filenames[0])
             self.cube_dict[opt] = cubes
             for cube in cubes:
                 cube_stash = cube.attributes['STASH']
                 section, item = cube_stash.section, cube_stash.item
                 stash_name = self.stash_vars[section][item]
-                print('{0:>4}{1:>4} {2} {3}'.format(section, item, stash_name, cube.shape))
+                log.info('{0:>4}{1:>4} {2} {3}'.format(section, item, stash_name, cube.shape))
 
     def set_cube(self, cube_name):
 	file = self.cp.get(cube_name, 'file')
