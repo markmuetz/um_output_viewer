@@ -1,0 +1,14 @@
+#!/bin/bash --login
+#
+#PBS -l select=serial=true:ncpus=1
+#PBS -l walltime=00:20:00
+#PBS -j oe
+#PBS -A n02-weat
+
+# Make sure any symbolic links are resolved to absolute path
+export PBS_O_WORKDIR=$(readlink -f $PBS_O_WORKDIR)               
+
+# Change to the directory that the job was submitted from
+cd $PBS_O_WORKDIR
+
+bash post_proc.sh
