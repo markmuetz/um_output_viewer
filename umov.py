@@ -82,9 +82,11 @@ class UMOV(object):
             for output_var in output_vars_for_fn:
                 output_dict_for_fn[output_var] = self.umo.output_dict[output_var]
 
+	    log.info('Output fn: {}'.format(output_fn_name))
             output_fn = getattr(output, output_fn_name)
             full_path = os.path.join(output_dir,
                                      config.get(output_fn_name, 'filename') + '.png')
+	    log.info('Output to: {}'.format(full_path))
 
             output_fn(output_dict_for_fn.items(), full_path)
 

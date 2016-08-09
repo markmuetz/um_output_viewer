@@ -86,6 +86,7 @@ class UMO(object):
             if cache.enabled and cache.has(output_var):
                 self.output_dict[output_var] = cache.get(output_var)
                 skip[output_var] = True
+		log.info('Found cached for {}'.format(output_var))
 	    else:
 		self.output_dict[output_var] = []
 
@@ -99,7 +100,8 @@ class UMO(object):
 			continue
                     section = config.getint(output_var, 'section')
                     item = config.getint(output_var, 'item')
-                    analysis_fn = getattr(analysis, config.get(output_var, 'analysis'))
+		    analysis_fn_name = config.get(output_var, 'analysis')
+                    analysis_fn = getattr(analysis, analysis_fn_name)
 
                     cubes = iris.load(filename)
                     cube = None
@@ -116,6 +118,10 @@ class UMO(object):
                     if not cube:
                         raise Exception('Cannot find cube {}'.format(output_var))
                     
+		    log.info('Processing {}:{}:{}:{}'.format(analysis_fn_name,
+			                                    opt, 
+			                                    os.path.basename(filename), 
+							    output_var))
                     self.output_dict[output_var].append(analysis_fn(cube))
 
         for output_var in output_vars:
