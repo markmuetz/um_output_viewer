@@ -1,42 +1,31 @@
 import os
-from glob import glob
 from collections import OrderedDict
-from ConfigParser import ConfigParser
 
 import iris
 
+from config import config
+from cache import cache
+
 from um_stash_parser.parse_stash import load_stash_vars
+
+import analysis
+import output
+
 
 class UMO(object):
     def __init__(self, filename='umov.conf'):
-        self.cp = ConfigParser()
-        with open(filename) as f:
-            self.cp.readfp(f)
-
-        self.work_dir = self.cp.get('paths', 'work_dir')
-
-        file_globs = OrderedDict()
-        for opt in self.cp.options('files'):
-            file_globs[opt] = os.path.join(self.work_dir, self.cp.get('files', opt))
-
-        self.filename_dict = OrderedDict()
-        for opt, file_glob in file_globs.items():
-            self.filename_dict[opt] = sorted(glob(file_glob))
-
-        if self.cp.getboolean('settings', 'ignore_orography_warnings'):
-            # DO NOT LEAVE IN!!!
-            # Added so as orography warning not shown on iris.load.
-            import warnings
-            warnings.filterwarnings("ignore")
-	
 	self.curr_time_index = 0
+        self.print_vars()
+
+    def process(self):
+        self.gen_output_dict()
 
 
     def print_vars(self):
         self.cube_dict = OrderedDict()
         self.stash_vars = load_stash_vars()
 
-        for opt, filenames in self.filename_dict.items():
+        for opt, filenames in config.filename_dict.items():
             print(opt)
             cubes = iris.load(filenames[0])
             self.cube_dict[opt] = cubes
@@ -67,6 +56,57 @@ class UMO(object):
 	    raise Exception('Cannot find cube {}'.format(output_var))
 
 	self.curr_cube = cube
+
+    def gen_output_dict(self):
+        self.output_dict = OrderedDict()
+	skip = {}
+
+        output_vars = config.options('output_vars')
+        for output_var in output_vars:
+	    skip[output_var] = False
+
+            if cache.enabled and cache.has(output_var):
+                self.output_dict[output_var] = cache.get(output_var)
+                skip[output_var] = True
+	    else:
+		self.output_dict[output_var] = []
+
+        for opt, filenames in config.filename_dict.items():
+	    for filename in filenames:
+                for output_var in output_vars:
+		    if skip[output_var]:
+			continue
+                    stream = config.get(output_var, 'stream')
+		    if stream != opt:
+			continue
+                    section = config.getint(output_var, 'section')
+                    item = config.getint(output_var, 'item')
+                    analysis_fn = getattr(analysis, config.get(output_var, 'analysis'))
+
+                    cubes = iris.load(filename)
+                    cube = None
+
+                    for test_cube in cubes:
+                        cube_stash = test_cube.attributes['STASH']
+                        cube_section, cube_item = cube_stash.section, cube_stash.item
+                        if cube_section == section and cube_item == item:
+                            print('Found cube {0:>3} {1:>3}'.format(section, item))
+                            if cube != None:
+                                print('Found duplicates')
+                            cube = test_cube
+
+                    if not cube:
+                        raise Exception('Cannot find cube {}'.format(output_var))
+                    
+                    self.output_dict[output_var].append(analysis_fn(cube))
+
+        for output_var in output_vars:
+	    if skip[output_var]:
+		continue
+            self.output_dict[output_var] = iris.cube.CubeList(self.output_dict[output_var]).concatenate_cube()
+
+	    if cache.enabled:
+                cache.set(output_var, self.output_dict[output_var])
 
     def next_time(self):
 	self.curr_time_index += 1

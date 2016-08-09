@@ -4,6 +4,7 @@ import pylab as plt
 def multi_timeseries(timeseries_list, filename):
     plt.ion()
     f, axes = plt.subplots(1, len(timeseries_list))
+    f.canvas.set_window_title('timeseries') 
     for i, (name, timeseries) in enumerate(timeseries_list):
 	name = timeseries.name()
 	times = timeseries.coords()[0].points.copy()
@@ -18,6 +19,7 @@ def multi_timeseries(timeseries_list, filename):
 
 def vertical_profiles_first_last(vp_list, filename):
     plt.ion()
+    plt.figure('vertical_profiles')
     vp = vp_list[0][1]
     plt.plot(vp.data[0], vp.aux_coords[4].points)
     plt.plot(vp.data[-1], vp.aux_coords[4].points)
