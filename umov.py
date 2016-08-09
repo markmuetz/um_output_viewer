@@ -19,6 +19,7 @@ def main():
     if config.ignore_orography_warnings:
         # DO NOT LEAVE IN!!!
         # Added so as orography warning not shown on iris.load.
+        # Orography warning gone, now get iris warning about FUTURE promoting.
         log.warn('Disabling warnings')
         import warnings
         warnings.filterwarnings("ignore")
