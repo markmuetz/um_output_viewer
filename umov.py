@@ -97,7 +97,16 @@ class UMOV(object):
         fmt = '%Y-%m-%d %H:%M'
 	timestamp = frame_time.strftime(fmt)
 
-        plt.title(timestamp)
+        if self.umo.curr_cube.ndim == 3:
+            plt.title('{} - {}'.format(timestamp, self.frame.name()))
+        elif self.umo.curr_cube.ndim == 4:
+            heights = self.umo.curr_cube.coord('level_height').points
+            
+            height = heights[self.umo.curr_level_index]
+            plt.title('{} @ {} m - {}'.format(timestamp, 
+                                              height, 
+                                              self.frame.name()))
+
         plt.imshow(self.frame.data, origin='lower', interpolation='nearest')
 
     def play_frames(self):

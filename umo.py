@@ -18,6 +18,7 @@ class UMO(object):
     def __init__(self, filename='umov.conf'):
 	self.curr_time_index = 0
 	self.curr_level_index = 0
+        self.all_cubes = []
         self.print_vars()
 
     def process(self):
@@ -33,6 +34,7 @@ class UMO(object):
             cubes = iris.load(filenames[0])
             self.cube_dict[opt] = cubes
             for cube in cubes:
+                self.all_cubes.append(cube)
                 cube_stash = cube.attributes['STASH']
                 section, item = cube_stash.section, cube_stash.item
                 stash_name = self.stash_vars[section][item]
@@ -59,6 +61,7 @@ class UMO(object):
 	    raise Exception('Cannot find cube {}'.format(output_var))
 
 	self.curr_cube = cube
+        self.curr_cube_index = self.all_cubes.index(self.curr_cube)
 
     def gen_output_dict(self):
         self.output_dict = OrderedDict()
@@ -113,15 +116,36 @@ class UMO(object):
 
     def prev_time(self):
 	self.curr_time_index -= 1
+        self.check_indices_in_range()
 
     def next_time(self):
 	self.curr_time_index += 1
+        self.check_indices_in_range()
 
     def prev_level(self):
 	self.curr_level_index -= 1
+        self.check_indices_in_range()
 
     def next_level(self):
 	self.curr_level_index += 1
+        self.check_indices_in_range()
+
+    def prev_cube(self):
+	self.curr_cube_index -= 1
+        self.curr_cube_index %= len(self.all_cubes)
+        self.curr_cube = self.all_cubes[self.curr_cube_index]
+        self.check_indices_in_range()
+
+    def next_cube(self):
+	self.curr_cube_index += 1
+        self.curr_cube_index %= len(self.all_cubes)
+        self.curr_cube = self.all_cubes[self.curr_cube_index]
+        self.check_indices_in_range()
+
+    def check_indices_in_range(self):
+        self.curr_time_index %= self.curr_cube.shape[0]
+        if self.curr_cube.ndim == 4:
+            self.curr_level_index %= self.curr_cube.shape[1]
 
     def get_curr_2d_slice(self):
         if self.curr_cube.ndim == 3:
