@@ -35,6 +35,9 @@ def convert_all():
             assert(ext[:3] == config.convert_from)
             output_filename = pre + '.' + ext[-1] + config.convert_to 
 
+	    if os.path.exists(output_filename):
+		log.info('Exists: {}'.format(output_filename))
+		continue
             log.info('Convert: ' + filename)
             log.info('to     : ' + output_filename)
 
