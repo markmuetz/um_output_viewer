@@ -14,12 +14,21 @@ Should have the following:
 * UMOV settings
 * Datetime
 * git hash/tag
+* Logs for auditing operations
 
 caching
 =======
+
+Caching has been done through use of a cache\_name config option. To change the cache the user must
+change this option.
+
+caching\_old
+------------
 
 Cache needs to be invalidated on the following:
 
 * Change to settings?
 * Change to code (done through git commits)
 * Change to data in work (how to check this?)
+
+

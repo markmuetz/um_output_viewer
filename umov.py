@@ -1,6 +1,9 @@
 import os
+import datetime as dt
 from collections import OrderedDict
 import shutil
+
+import pylab as plt
 
 from config import config
 from local_state import state
@@ -47,6 +50,21 @@ class UMOV(object):
         self.gen_output()
 
 
+    def print_streams(self):
+        for stream in config.options('streams'):
+            print(stream)
+
+    def print_stream_files(self, stream):
+        for filename in config.filename_dict[stream]:
+            print(filename)
+
+    def print_all_files(self):
+        for stream in config.options('streams'):
+            print(stream)
+            for filename in config.filename_dict[stream]:
+                print('  ' + filename)
+
+
     def gen_output(self):
         output_dir = config.output_dir
 
@@ -69,6 +87,33 @@ class UMOV(object):
                                      config.get(output_fn_name, 'filename') + '.png')
 
             output_fn(output_dict_for_fn.items(), full_path)
+
+    def display_curr_frame(self):
+        plt.ion()
+        plt.clf()
+        self.frame = self.umo.get_curr_2d_slice()
+        time_since_1970 = dt.timedelta(hours=self.frame.coord('time').points[0])
+        frame_time = dt.datetime(1970, 1, 1) + time_since_1970
+        fmt = '%Y-%m-%d %H:%M'
+	timestamp = frame_time.strftime(fmt)
+
+        plt.title(timestamp)
+        plt.imshow(self.frame.data, origin='lower', interpolation='nearest')
+
+    def play_frames(self):
+        self.umo.curr_time_index = 0
+        for i in range(self.umo.curr_cube.shape[0]):
+            self.display_curr_frame()
+            self.umo.next_time()
+            plt.pause(0.1)
+
+    def play_vertical_frames(self):
+        assert(self.umo.curr_cube.ndim == 4)
+        self.umo.curr_level = 0
+        for i in range(self.umo.curr_cube.shape[1]):
+            self.display_curr_frame()
+            self.umo.next_level()
+            plt.pause(0.1)
 
 
 if __name__ == '__main__':

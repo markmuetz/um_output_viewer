@@ -11,7 +11,7 @@ class Config(ConfigParser):
         self.read_config(filename)
 
     def read_config(self, filename):
-        print('reading config')
+        # print('reading config')
         self.read(filename)
 
         for option in self.options('settings'):
@@ -34,6 +34,11 @@ class Config(ConfigParser):
 
 	timestamp = dt.datetime.now().strftime(self.output_time_fmt)
         self.output_dir = os.path.join(self.output_base_dir, timestamp)
+
+    def reload(self):
+        # TODO: problematic if user has deleted an option in settings.
+        self.read_config(self.filename)
+
 
 
 config = Config()

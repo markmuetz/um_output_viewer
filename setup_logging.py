@@ -20,6 +20,7 @@ def get_logger(name='umov'):
         file_level = getattr(config, 'FILE_LOG_LEVEL', 'DEBUG').upper()
 
 	formatter = logging.Formatter('%(asctime)s:%(name)-12s:%(levelname)-8s: %(message)s')
+	print_formatter = logging.Formatter('%(levelname)-8s: %(message)s')
 
 	logging_filename = os.path.join(config.output_dir, 'umov.log')
 	fileHandler = logging.FileHandler(logging_filename, mode='a')
@@ -27,13 +28,13 @@ def get_logger(name='umov'):
         fileHandler.setLevel(file_level)
 
 	streamHandler = logging.StreamHandler()
-	streamHandler.setFormatter(formatter)
+	streamHandler.setFormatter(print_formatter)
 	streamHandler.setLevel(console_level)
 
 	root_logger.setLevel(min(console_level, file_level))
 
 	root_logger.addHandler(fileHandler)
-	root_logger.addHandler(streamHandler)
+	#root_logger.addHandler(streamHandler)
 
 	root_logger.debug('Created root logger: {0}'.format('umov.log'))
 
