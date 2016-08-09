@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import iris
 
@@ -36,7 +35,7 @@ def convert_all():
 
             cubes = iris.load(filename)
             iris.save(cubes, output_filename)
-            shutil.rmtree(filename)
+            os.remove(filename)
 
 
 if __name__ == '__main__':

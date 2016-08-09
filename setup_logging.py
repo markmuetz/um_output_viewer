@@ -8,6 +8,7 @@ def get_logger(name='umov'):
     '''Gets a logger specified by name. Sets up root logger ('umov') if nec.'''
     # Get root stormtracks logger and check if it's already been setup.
     root_logger = logging.getLogger('umov')
+    root_logger.propagate = False
 
     if getattr(root_logger, 'is_setup', False):
         # Stops log being setup for a 2nd time during ipython reload(...)
