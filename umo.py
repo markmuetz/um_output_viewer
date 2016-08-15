@@ -127,10 +127,15 @@ class UMO(object):
         for output_var in output_vars:
 	    if skip[output_var]:
 		continue
-            self.output_dict[output_var] = iris.cube.CubeList(self.output_dict[output_var]).concatenate_cube()
+	    try:
+		log.info('Concatenating {} {} cubes'.format(len(self.output_dict[output_var]),
+							    output_var))
+		self.output_dict[output_var] = iris.cube.CubeList(self.output_dict[output_var]).concatenate_cube()
 
-	    if cache.enabled:
-                cache.set(output_var, self.output_dict[output_var])
+		if cache.enabled:
+		    cache.set(output_var, self.output_dict[output_var])
+	    except:
+		log.error('Failed to concatenate {}'.format(output_var))
 
     def prev_time(self):
 	self.curr_time_index -= 1

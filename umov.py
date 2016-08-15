@@ -75,21 +75,24 @@ class UMOV(object):
 	shutil.copy('umov.conf', output_dir)
 
         for output_fn_name in config.options('output_fn_names'):
-            log.debug(output_fn_name)
-            variables = config.get(output_fn_name, 'variables')
-            output_vars_for_fn = map(str.strip, variables.split(','))
-            output_dict_for_fn = OrderedDict()
+	    try:
+		log.debug(output_fn_name)
+		variables = config.get(output_fn_name, 'variables')
+		output_vars_for_fn = map(str.strip, variables.split(','))
+		output_dict_for_fn = OrderedDict()
 
-            for output_var in output_vars_for_fn:
-                output_dict_for_fn[output_var] = self.umo.output_dict[output_var]
+		for output_var in output_vars_for_fn:
+		    output_dict_for_fn[output_var] = self.umo.output_dict[output_var]
 
-	    log.info('Output fn: {}'.format(output_fn_name))
-            output_fn = getattr(output, output_fn_name)
-            full_path = os.path.join(output_dir,
-                                     config.get(output_fn_name, 'filename') + '.png')
-	    log.info('Output to: {}'.format(full_path))
+		log.info('Output fn: {}'.format(output_fn_name))
+		output_fn = getattr(output, output_fn_name)
+		full_path = os.path.join(output_dir,
+					 config.get(output_fn_name, 'filename') + '.png')
+		log.info('Output to: {}'.format(full_path))
 
-            output_fn(output_dict_for_fn.items(), full_path)
+		output_fn(output_dict_for_fn.items(), full_path)
+	    except:
+		log.error('Failed to output {}'.format(output_fn_name))
 
     def display_curr_frame(self):
         plt.ion()

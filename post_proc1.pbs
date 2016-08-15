@@ -1,7 +1,8 @@
 #!/bin/bash --login
 #
+# Run with qsub post_proc1.pbs
 #PBS -l select=serial=true:ncpus=1
-#PBS -l walltime=02:00:00
+#PBS -l walltime=04:00:00
 #PBS -j oe
 #PBS -A n02-weat
 
