@@ -1,71 +1,147 @@
-# -*- coding: utf-8 -*-
+#!/bin/env python
 """
-Demonstrates use of GLScatterPlotItem with rapidly-updating plots.
-
+Proof of concept 3D UM output viewer.
+Will only work with 4D (3D+time) Iris cubes.
 """
-
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph.opengl as gl
 import numpy as np
-from umov import main
+from umov import main as umov_main
 
-umov = main()
+class Window(QtGui.QWidget):
+    time_slider_changed = QtCore.pyqtSignal(int)
+    thresh_slider_changed = QtCore.pyqtSignal(float)
 
-app = QtGui.QApplication([])
-w = gl.GLViewWidget()
-w.opts['distance'] = 20
-w.show()
-w.setWindowTitle('pyqtgraph example: GLScatterPlotItem')
+    def __init__(self):
+        super(Window, self).__init__()
 
-g = gl.GLGridItem()
-w.addItem(g)
+        # Create UMOV instance.
+        self.umov = umov_main()
+        self.thresh = 0.5
+        self.cube_index = 0
+        self.cube = self.umov.umo.curr_cube[self.cube_index]
 
-##
-##  Second example shows a volume of points with rapidly updating color
-##  and pxMode=True
-##
+        # Create opengl widget.
+        self.umov_view = gl.GLViewWidget()
+        self.umov_view.opts['distance'] = 64
 
-cube_index = 0
-cube = umov.umo.curr_cube[cube_index]
+        # Add a grid.
+        grid = gl.GLGridItem()
+        grid.setSize(64, 64, 0)
+        grid.setSpacing(4, 4, 0)
+        self.umov_view.addItem(grid)
 
-def get_pos(data):
-    d = (data > 1)
-    size = data[d] * 0.5
-    pos = np.array(np.roll(np.array(np.where(d)).T, -1, axis=1), dtype=np.float64)
-    pos *= [20./data.shape[1], 20./data.shape[2], 20./data.shape[0]]
-    pos -= [10, 10, 0]
-    #pos *= [10,10,10]
-    #size = np.ones(pos.shape[0])*10
+        # Start layout.
+        self.resize(600, 400)
+        self.umov_view.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        layout = QtGui.QGridLayout()
+        self.setLayout(layout)
+        # Sets width of 2nd column and 1st to be larger.
+        layout.setColumnStretch(1, 2)
+        layout.setRowStretch(0, 2)
 
-    return pos, size
+        # Initial scatter.
+        pos, size = self.get_pos_size(self.cube.data)
+        self.point_scatter = gl.GLScatterPlotItem(pos=pos, color=(1,1,1,1), size=size)
+        self.umov_view.addItem(self.point_scatter)
 
-pos, size = get_pos(cube.data)
-sp2 = gl.GLScatterPlotItem(pos=pos, color=(1,1,1,1), size=size)
-w.addItem(sp2)
+        # Create some controls.
+        button = QtGui.QPushButton('Pause/Play')
+        button.clicked.connect(self.toggle_pause_play)
 
-def update():
-    global umov, sp2, cube_index
-    cube_index += 1
-    cube_index %= umov.umo.curr_cube.shape[0]
+        self.time_slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.time_slider.setRange(0, 360)
+        self.time_slider.setSingleStep(1)
+        self.time_slider.setPageStep(15)
+        self.time_slider.setTickInterval(60)
+        self.time_slider.setTickPosition(QtGui.QSlider.TicksRight)
+        self.time_slider.valueChanged.connect(self.set_time_slider_value)
+        self.time_slider_changed.connect(self.time_slider.setValue)
 
-    cube = umov.umo.curr_cube[cube_index]
-    pos, size = get_pos(cube.data)
+        self.thresh_slider = QtGui.QSlider(QtCore.Qt.Vertical)
+        self.thresh_slider.setRange(-500, 500)
+        self.thresh_slider.setSingleStep(1)
+        #self.thresh_slider.setPageStep(0.01)
+        self.thresh_slider.setTickInterval(100)
+        self.thresh_slider.setTickPosition(QtGui.QSlider.TicksRight)
+        self.thresh_slider.valueChanged.connect(self.set_thresh_slider_value)
+        self.thresh_slider_changed.connect(self.thresh_slider.setValue)
+        self.thresh_slider.setValue(self.thresh * 100)
 
-    w.removeItem(sp2)
-    sp2 = gl.GLScatterPlotItem(pos=pos, color=(1,1,1,1), size=size)
-    w.addItem(sp2)
+        # Populate layout.
+        layout.addWidget(button, 4, 0) 
+        layout.addWidget(self.umov_view, 0, 1, 3, 1) # spans 3 rows.
+        layout.addWidget(self.time_slider, 4, 1)
+        layout.addWidget(self.thresh_slider, 0, 0, 3, 1)
 
-    #sp2.setData(pos=pos)
-    
-    
-t = QtCore.QTimer()
-t.timeout.connect(update)
-t.start(50)
+        # Setup animation callback.
+        self.timer = QtCore.QTimer(self)
+        self.connect(self.timer, QtCore.SIGNAL("timeout()"), self.update)
+        self.paused = False
+        self.play()
+
+    def toggle_pause_play(self):
+        self.paused = not self.paused
+        if self.paused:
+            self.pause()
+        else:
+            self.play()
+
+    def play(self):
+        self.timer.start(50)
+
+    def pause(self):
+        self.timer.stop()
+
+    def set_time_slider_value(self, value):
+        self.cube_index = value
+        self.render()
+
+    def set_thresh_slider_value(self, value):
+        self.thresh = value / 100.
+        self.render()
+
+    def update(self):
+        self.cube_index += 1
+        self.cube_index %= self.umov.umo.curr_cube.shape[0]
+
+        self.time_slider_changed.emit(self.cube_index)
+
+    def render(self):
+        self.cube = self.umov.umo.curr_cube[self.cube_index]
+        pos, size = self.get_pos_size(self.cube.data)
+
+        self.umov_view.removeItem(self.point_scatter)
+        self.point_scatter = gl.GLScatterPlotItem(pos=pos, color=(1,1,1,0.5), size=size)
+        self.umov_view.addItem(self.point_scatter)
+
+    def get_pos_size(self, data):
+        # Apply comparison.
+        d = (data > self.thresh)
+        # Get value of array where comparison is True.
+        size = data[d] * 0.5
+        # Needs some unpacking:
+        # np.where(d) gets indices where comparison is true, but needs transposed.
+        # indices are currently in order z, x, y, np.roll fixes this.
+        pos_indices = np.roll(np.array(np.where(d)).T, -1, axis=1)
+
+        # Map indices to values.
+        pos = np.empty_like(pos_indices, dtype=np.float64)
+        pos[:, 0] = self.cube.coord('grid_longitude').points[pos_indices[:, 0]] / 1000
+        pos[:, 1] = self.cube.coord('grid_latitude').points[pos_indices[:, 1]] / 1000
+        pos[:, 2] = self.cube.coord('level_height').points[pos_indices[:, 2]] / 1000
+
+        pos -= [32, 32, 0]
+
+        return pos, size
 
 
 ## Start Qt event loop unless running in interactive mode.
 if __name__ == '__main__':
     import sys
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtGui.QApplication.instance().exec_()
-
+        print('Starting app')
+        app = QtGui.QApplication(sys.argv)
+        window = Window()
+        window.show()
+        sys.exit(app.exec_())
